@@ -1,3 +1,4 @@
+
 include:
   - template: Auto-DevOps.gitlab-ci.yml
 
@@ -5,3 +6,40 @@ variables:
   SAST_EXCLUDED_PATHS: "frontend/src/assets/private/**"
   TEST_DISABLED: "true"
   DAST_DISABLED: "true"
+
+stages:
+  - Sec
+
+variables:
+  SAST_TOOL_IMAGE: "returntocorp/semgrep"
+  SCA_TOOL_IMAGE: "owasp/dependency-check"
+  SECRETS_TOOL_IMAGE: "zricethezav/gitleaks"
+
+sast_job:
+  stage: Sec
+  image: $SAST_TOOL_IMAGE
+  script:
+    - semgrep --config auto --output ./results/semgrep-report.json
+  artifacts:
+    paths:
+      - ./results/semgrep-report.json
+
+sca_job:
+  stage: Sec
+  image: $SCA_TOOL_IMAGE
+  script:
+    - /usr/share/dependency-check/bin/dependency-check.sh --project "OWASP Juice Shop" -s . -o ./dependency-check-report
+  artifacts:
+    paths:
+      - ./dependency-check-report
+
+secrets_job:
+  stage: Sec
+  image: $SECRETS_TOOL_IMAGE
+  script:
+    - gitleaks detect --source . --report-path ./gitleaks-report.json
+  artifacts:
+    paths:
+      - ./gitleaks-report.json
+
+
